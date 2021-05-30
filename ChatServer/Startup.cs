@@ -1,3 +1,4 @@
+using ChatServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -32,6 +33,9 @@ namespace ChatRestApi
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "ChatRestApi", Version = "v1" });
             });
+
+            services.AddSingleton<WebSocketServer>();
+            services.AddSingleton<WebSocketConnectionManager>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -12,24 +12,34 @@ namespace ConsoleClient
         static async Task SendTicksRequest()
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11;
-            var ws = new ClientWebSocket();
+            using var ws = new ClientWebSocket();
             var uri = new Uri("wss://localhost:5001/ws");
 
             await ws.ConnectAsync(uri, CancellationToken.None);
 
-            var reqAsBytes = Encoding.UTF8.GetBytes("{data}");
-            var ticksRequest = new ArraySegment<byte>(reqAsBytes);
+            try
+            {
+                var reqAsBytes = Encoding.UTF8.GetBytes("{data}");
+                var ticksRequest = new ArraySegment<byte>(reqAsBytes);
 
-            await ws.SendAsync(ticksRequest,
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
+                await ws.SendAsync(ticksRequest,
+                    WebSocketMessageType.Text,
+                    true,
+                    CancellationToken.None);
 
-            var buffer = new ArraySegment<byte>(new byte[1024]);
-            var result = await ws.ReceiveAsync(buffer, CancellationToken.None);
+                while (ws.State == WebSocketState.Open)
+                {
+                    var buffer = new ArraySegment<byte>(new byte[1024]);
+                    var result = await ws.ReceiveAsync(buffer, CancellationToken.None);
 
-            string response = Encoding.UTF8.GetString(buffer.Array, 0, result.Count);
-            Console.WriteLine(response);
+                    string response = Encoding.UTF8.GetString(buffer.Array, 0, result.Count);
+                    Console.WriteLine(response);
+                }
+            }
+            finally
+            {
+                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "just die already", CancellationToken.None);
+            }
         }
 
         static async Task Main(string[] args)
