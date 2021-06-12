@@ -8,7 +8,8 @@ namespace ChatClientEngine
 {
     interface IChatClient
     {
-        public void Connect(string channelName);
-        public void SendMessage(string channelName, string message);
+        Task Connect(string serverAddress);
+        Task SendMessage(string message);
+        Task<string> RecieveMessage();
     }
 }

@@ -19,6 +19,16 @@ namespace ChatServer
             return ConnID;
         }
 
+        public void RemoveSocket(WebSocket socket)
+        {
+            string id = _sockets.FirstOrDefault(s => s.Value == socket).Key;
+            _sockets.TryRemove(id, out WebSocket sock);
+            foreach (var item in _sockets)
+            {
+                if (item.Value.State == WebSocketState.Closed) _sockets.TryRemove(item);
+            }
+        }
+
         public ConcurrentDictionary<string, WebSocket> GetAllSockets()
         {
             return _sockets;

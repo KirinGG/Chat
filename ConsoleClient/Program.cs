@@ -1,51 +1,50 @@
-﻿using System;
-using System.Net;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
+﻿using ChatClientEngine;
+using System;
 using System.Threading.Tasks;
 
 namespace ConsoleClient
 {
     class Program
     {
-        static async Task SendTicksRequest()
+        private static void ProcessMessage(string message)
         {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11;
-            using var ws = new ClientWebSocket();
-            var uri = new Uri("wss://localhost:5001/ws");
-
-            await ws.ConnectAsync(uri, CancellationToken.None);
-
-            try
-            {
-                var reqAsBytes = Encoding.UTF8.GetBytes("{data}");
-                var ticksRequest = new ArraySegment<byte>(reqAsBytes);
-
-                await ws.SendAsync(ticksRequest,
-                    WebSocketMessageType.Text,
-                    true,
-                    CancellationToken.None);
-
-                while (ws.State == WebSocketState.Open)
-                {
-                    var buffer = new ArraySegment<byte>(new byte[1024]);
-                    var result = await ws.ReceiveAsync(buffer, CancellationToken.None);
-
-                    string response = Encoding.UTF8.GetString(buffer.Array, 0, result.Count);
-                    Console.WriteLine(response);
-                }
-            }
-            finally
-            {
-                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "just die already", CancellationToken.None);
-            }
+            Console.WriteLine(message);
         }
 
         static async Task Main(string[] args)
         {
-            await SendTicksRequest();
-            Console.ReadLine();
+            var cc = new ChatClient();
+            cc.NewMessageRecieved += ProcessMessage;
+
+            AppDomain.CurrentDomain.ProcessExit += async (s, ev) =>
+            {
+                Console.WriteLine("process exit");
+                await cc.Disconnect();
+            };
+
+            Console.CancelKeyPress += async (s, ev) =>
+            {
+                Console.WriteLine("Ctrl+C pressed");
+                await cc.Disconnect();
+                ev.Cancel = true;
+            };
+
+            try
+            {               
+                await cc.Connect("wss://localhost:5001/ws");
+                await cc.SendMessage("current time is: " + DateTime.Now.ToString());
+                
+                cc.StartTrackingIncomingMessages();
+
+                while (true)
+                {
+                    await cc.SendMessage(Console.ReadLine());
+                }
+            }
+            finally
+            {
+                await cc.Disconnect();
+            }
         }
     }
 }
