@@ -8,13 +8,14 @@ namespace ChatClientEngine
 {
     public class ChatClient : IChatClient
     {
-        public readonly ClientWebSocket ws = new ClientWebSocket();
+        private ClientWebSocket ws = new ClientWebSocket();
 
         public delegate void MessageHandler(string message);
         public event MessageHandler NewMessageRecieved;
 
         public async Task Connect(string serverAddress)
         {
+            ws = new ClientWebSocket();
             var uri = new Uri(serverAddress);
             await ws.ConnectAsync(uri, CancellationToken.None);
         }
@@ -22,6 +23,7 @@ namespace ChatClientEngine
         public async Task Disconnect()
         {
             await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "client disconnect", CancellationToken.None);
+            ws = null;
         }
 
         public async Task SendMessage(string message)
@@ -49,7 +51,7 @@ namespace ChatClientEngine
         {
             Thread messageTrackingThread = new Thread(async () => 
             {
-                while (ws.State == WebSocketState.Open)
+                while (ws?.State == WebSocketState.Open)
                 {
                     var message = await RecieveMessage();
                     NewMessageRecieved(message);
